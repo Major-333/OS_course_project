@@ -1,10 +1,14 @@
 <template>
     <div class="map2">
         <div class="BtnGroup">
-            <div v-for="(item,index) in DataList" :key="index" class="ctn">
+            <div v-for="(item,index) in labelList" :key="index" class="ctn">
                 <h1 class="alert">{{ item }}</h1>
-                <a-button class="a-button" shape="circle" ghost = "true" icon ="arrow-up"></a-button>
-                <a-button class="a-button" shape="circle" ghost = "true" icon ="arrow-down"></a-button>
+                <a-button :class="{aBtn:!upList[index],aBtn2:upList[index]}" icon="arrow-up"
+                          @click="handleClick(1,index)" shape="circle" ghost="true">
+                </a-button>
+                <a-button :class="{aBtn:!downList[index],aBtn2:downList[index]}" icon="arrow-down"
+                          @click="handleClick(-1,index)" shape="circle" ghost="true">
+                </a-button>
             </div>
         </div>
     </div>
@@ -15,13 +19,29 @@
         name: "BtnGroup",
         data(){
             return{
-                DataList:["01","02","03","04","05","06","07","08","10","11","12","14","14","15","16","17","18","19","20"],
+                labelList:[...Array(20)].map((i,j)=>j+1<10?"0"+(1+j).toString():(1+j).toString()),
             }
-        }
+        },
+        props:{
+            upList:[],
+            downList:[],
+        },
+        methods:{
+            handleClick(dir,index){
+                this.$emit("select",dir,index);
+            }
+        },
     }
 </script>
 
 <style scoped>
+    .aBtn{
+        margin: 3px;
+    }
+    .aBtn2{
+        margin: 3px;
+        border-color: deepskyblue;
+    }
     .map2{
         background: linear-gradient(to bottom left, #EF8D9C 40%, #FFC39E 100%);
         border-radius: 20px;
@@ -34,12 +54,9 @@
         left: 3%;
         top:  3%;
         float: left;
-        /*width: 180px;*/
-        /*height: 100px;*/
     }
-    .a-button{
-        margin: 3px;
-    }
+
+
     .alert {
         font-weight: 700;
         letter-spacing: 5px;

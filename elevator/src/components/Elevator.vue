@@ -1,8 +1,9 @@
 <template>
     <div class="elevator">
-        <div :class="{map1:!content.isBusy, map2:content.isBusy}">
+        <div :class="{map1:direction===0&&doorState===0, map2:!(direction===0&&doorState===0)}">
             <div class="BtnGroup" >
-                <a-button :class="{aButton:!isSelect[index],selectBtn:isSelect[index]}" shape="circle" ghost=true v-for="(item,index) in btnList" :key="index" @click="handleClick(item-1)">
+                <a-button :class="{aButton:!isSelect[index],selectBtn:isSelect[index]}"
+                          shape="circle" ghost=true v-for="(item,index) in btnList" :key="index" @click="handleClick(item-1)">
                     {{ item }}
                 </a-button>
             </div>
@@ -14,7 +15,7 @@
                 </div>
                 <div class="shadow scale"></div>
                 <div class="message">
-                    <h1 class="alert">{{ content.state }}</h1><p>{{ content.poster }}</p>
+                    <h1 class="alert">{{ content.stateStr }}</h1><p>{{ content.poster }}</p>
                     <h1 class="alert">载重：{{ load }}</h1>
                 </div>
                 <div><h1 class="alert-top">{{ ctFloor+1 }}F</h1></div>
@@ -28,131 +29,218 @@
         name: "Elevator",
         data(){
             return {
-                btnList:[...Array(20)].map((i,j)=>j+1), // i
-                ctFloor: 0,
-                destination: 0,
-                isSelect: [...Array(20)].map(()=>false),
-                tmp: -1,
-                content: {
-                    poster: "yay, everything is ready.",
-                    state: "Free",
-                    isBusy: false,
-                    isStop: true,
-                },
-                reqFloor:[...Array(20)].map(()=>0),
+                btnList:[...Array(20)].map((i,j)=>j+1),     // 内部按钮显示的数字
+                doorState: 0,                               // 电梯门状态，1代表开门
+                ctFloor: 0,                                 // 当前楼层
+                destination: 0,                             // 最远端
+                isSelect: [...Array(20)].map(()=>false),    // 内部请求队列
+                upList: [...Array(20)].map(()=>false),      // 外部向上请求队列
+                downList: [...Array(20)].map(()=>false),    // 外部向下请求队列
+                oldDir: 0,                                  // 上一次的方向
+                waitToRun:false,                            // 关门后是否启动run(补丁关门时启动run问题)
             }
         },
         props:{
-            id: Number,
-            waitList:[],
-            load: Number,
-            capacity: Number,
-            reqList:[],
+            id: Number,                                     // 电梯id编号
+            upWaitList:[],                                  // 外部向上请求队列
+            downWaitList:[],                                // 外部向下请求队列
+            load: Number,                                   // 电梯当前载重
+            capacity: Number,                               // 电梯最大容积
+            cancel:Number,
+            ignore:Boolean,
         },
         computed:{
-            direction:function(){
+            direction:function(){                           // 根据ctFloor和destination计算dir 0可能是Free也可能是Stop
                 if(this.ctFloor===this.destination){
                     return 0;
                 }else if(this.ctFloor>this.destination){
                     return -1;
                 }else{
+                    console.log("已经改变dir为1了");
                     return 1;
+                }
+            },
+            content:function () {
+                if(this.doorState===1){
+                    return {
+                        poster: "oh baby just wait a minute.",
+                        stateStr: "Open the Door",
+                        isStop: true,
+                        isBusy: true,
+                    }
+                }
+                else{
+                    if(this.direction===0){
+                        return {
+                            poster: "yay, everything is ready.",
+                            stateStr: "Free",
+                            isStop: true,
+                            isBusy: false,
+                        }
+                    }
+                    else{
+                        return {
+                            poster: "oh baby just wait a minute.",
+                            stateStr: "Busy",
+                            isStop: false,
+                            isBusy: true,
+                        }
+                    }
+                }
+            },
+        },
+        methods: {
+            handleClick(index){                             // 内部按钮点击处理
+                this.$set(this.isSelect,index,true);
+                if(this.direction===0){                     // 启动
+                    console.log(index);
+                    if(index===this.ctFloor){
+                        if(this.doorState===0){
+                            this.openDoor(false);
+                        }
+                    }else{
+                        console.log("改变dst了");
+                        this.destination=index;
+                    }
+                }
+            },
+            run(){                                          // 运行逻辑
+                if(this.direction!==0){                     // 如果在运行中
+                    console.log("run");
+                    if(this.direction===1){                 // 移动位置
+                        this.ctFloor++;
+                        if(this.upList[this.ctFloor]||this.isSelect[this.ctFloor]){
+                            this.$emit("changeFloor",this.ctFloor,this.id);
+                            this.openDoor(true);
+                        }
+                        else{
+                            setTimeout(this.run,1000);
+                        }
+                    }
+                    else if(this.direction===-1){
+                        this.ctFloor--;
+                        if(this.downList[this.ctFloor]||this.isSelect[this.ctFloor]){
+                            this.$emit("changeFloor",this.ctFloor,this.id);
+                            this.openDoor(true);
+                        }
+                        else{
+                            setTimeout(this.run,1000);
+                        }
+                    }
+                }
+                else{
+                    //重新确定dst
+                    let dst;
+                    if(this.oldDir===1){
+                        dst=this.checkFromTop();
+                        if(dst===-1){
+                            dst=this.checkFromBottom();
+                        }
+                        if(dst===-1){
+                            this.destination=this.ctFloor;
+                            this.$emit("changeState",0,this.id);
+                        }else{
+                            this.destination=dst;
+                        }
+                    }
+                    else if(this.oldDir===-1){
+                        dst=this.checkFromBottom();
+                        if(dst===-1){
+                            dst=this.checkFromTop();
+                        }
+                        if(dst===-1){
+                            this.destination=this.ctFloor;
+                            this.$emit("changeState",0,this.id);
+                        }else{
+                            this.destination=dst;
+                        }
+                    }
+                }
+            },
+            checkFromBottom(){
+                for(let i=0;i<=this.ctFloor;++i){
+                    if(this.isSelect[i]||this.upList[i]||this.downList[i]){
+                        return i;
+                    }
+                }
+                return -1;
+            },
+            checkFromTop(){
+                for(let i=this.isSelect.length-1;i>=this.ctFloor;--i){
+                    if(this.isSelect[i]||this.upList[i]||this.downList[i]){
+                        return i;
+                    }
+                }
+                return -1;
+            },
+            openDoor(isContinue){
+                this.$emit("stop",this.ctFloor,this.id);
+                this.doorState=1;
+                this.isSelect[this.ctFloor]=false;
+                setTimeout(this.closeDoor,2500,isContinue);
+            },
+            closeDoor(isContinue){
+                console.log("关门");
+                this.doorState=0;
+                if(isContinue||this.waitToRun){
+                    this.waitToRun=false;
+                    setTimeout(this.run,1000);
                 }
             }
         },
-        methods: {
-            handleClick(index){
-                this.$set(this.isSelect,index,true);
-                this.tmp=index;
+        watch:{
+            direction(newValue,oldValue){
+                this.oldDir=oldValue;
+                if(newValue !== 0){
+                    this.$emit("changeState",1,this.id);
+                    if(this.doorState===0){
+                        this.run();
+                    }else{
+                        this.waitToRun=true;
+                    }
+
+                }
             },
-            run(){
-                if(this.direction!==0){
-                    this.content.state="Busy";
-                    this.content.isStop=false;
-                    if(this.direction===1){
-                        this.ctFloor++;
-                    }else{
-                        this.ctFloor--;
-                    }
-                    if(this.waitList[this.ctFloor]){
-                        this.$emit("finishReq",this.ctFloor,this.id);
-                        this.stop();
-                    }
-                    else if(this.isSelect[this.ctFloor]){
-                        this.stop();
-                    }else{
-                        setTimeout(this.run,1000);
-                    }
-                }else{
-                    //重新确定dst
-                    let dst=this.ctFloor;
-                    let found=false;
-                    for(let i=0;i<this.ctFloor;++i){
-                        if(this.isSelect[i]){
-                            dst=i;
-                            found=true;
+            upWaitList(newValue){
+                // alert(this.id.toString()+this.ignore);
+                for(let i=0;i<newValue.length;++i){
+                    this.upList[i]=this.upWaitList[i]
+                }
+                if(!this.isSelect[this.destination]&&!this.downList[this.destination]&&!this.upList[this.destination]){
+                    this.destination=this.ctFloor
+                }
+                //是否需要强制启动
+                if(this.doorState===0&&this.direction===0){
+                    for(let i=0;i<newValue.length;++i){
+                        if(newValue[i]){
+                            this.destination=i;
                             break;
                         }
                     }
-                    if(!found){
-                        for(let i=this.isSelect.length-1;i>this.ctFloor;i--){
-                            if(this.isSelect[i]){
-                                dst=i;
-                                found=true;
-                                break;
-                            }
-                        }
-                    }
-                    this.destination=dst;
-                    if(this.direction===0){
-                        this.content.poster="yay, everything is ready.";
-                        this.content.state="Free";
-                        this.content.isStop=true;
-                        this.content.isBusy=false;
-                    }
                 }
             },
-            stop(){
-                this.content.state="Open the Door!";
-                this.content.isStop=true;
-                this.isSelect[this.ctFloor]=false;
-                setTimeout(this.run,2000);
-            },
-        },
-        watch:{
-            direction(newValue){
-                if(newValue !== 0){
-                    this.content.poster="oh baby just wait a minute.";
-                    this.content.state="Busy";
-                    this.content.isStop=false;
-                    this.content.isBusy=true;
-                    this.run();
-                }
-            },
-            tmp(newValue){
-                // 确定dst
-                if(newValue===this.ctFloor&&this.direction===0){
-                    return;
-                }
-                this.isSelect[newValue]=true;
-                if((this.direction===1&&newValue>this.destination)||(this.direction===-1&&newValue<this.destination)){
-                    this.destination=newValue;
-                }else if(this.direction===0){
-                    this.destination=newValue;
-                }
-            },
-            waitList(newValue){
-                if(this.direction===0){
-                    for (let i=0;i<newValue.length;++i){
-                        if(newValue[i]!==0){
-                            this.destination=i;
-                        }
-                    }
-                }
-            },
-            reqList(newValue){
+            downWaitList(newValue){
                 for(let i=0;i<newValue.length;++i){
-                    this.reqFloor[i]+=newValue[i];
+                    this.downList[i]=this.downWaitList[i]
+                }
+                if(!this.isSelect[this.destination]&&!this.downList[this.destination]&&!this.upList[this.destination]){
+                    this.destination=this.ctFloor
+                }
+                //是否需要强制启动
+                if(this.doorState===0&&this.direction===0){
+                    for(let i=0;i<newValue.length;++i){
+                        if(newValue[i]){
+                            this.destination=i;
+                            break;
+                        }
+                    }
+                }
+
+            },
+            cancel(newValue){
+                if(newValue>=0&&newValue<20){
+                    this.$set(this.upList,this.cancel,false);
+                    this.$set(this.downList,this.cancel,false);
                 }
             }
         },

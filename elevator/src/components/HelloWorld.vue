@@ -1,38 +1,25 @@
 <template>
   <div class="hello">
 <!--    <BtnGroup></BtnGroup>-->
-
-    <div class="row">
-      <span>
-        <input v-model="f" class="swing" id="artist" type="text" placeholder="请输入初始楼层" /><label for="artist">From</label>
-      </span>
-      <span>
-        <input v-model="t" class="swing" id="song" type="text" placeholder="请输入目标楼层" /><label for="song">To</label>
-      </span>
-      <span>
-        <button class="submitBtn btn-3" @click="addReq" >添加乘客</button>
-      </span>
-      <span>
-          <h3>等待人数：{{ number }}</h3>
-      </span>
-    </div>
-
     <a-row>
         <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 10, offset: 6 }">
-            <BtnGroup></BtnGroup>
+            <BtnGroup :upList="upList" :downList="downList" @select="handleSelect">
+            </BtnGroup>
         </a-col>
     </a-row>
 
     <a-row class="gap"></a-row>
     <a-row>
         <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
-            <Elevator :waitList="waitList" :load="eleLoadList[0]" :capacity="eleCapacity"
-                      :id=0 :reqList="eleReqList[0]" @finishReq="updateWaitList">
+            <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[0]" :capacity="eleCapacity"
+                      :id=0 :reqList="eleReqList[0]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
+                      :stop="handleStop" :ignore="ignoreList[0]">
             </Elevator>
         </a-col>
         <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
-            <Elevator :waitList="waitList" :load="eleLoadList[1]" :capacity="eleCapacity"
-                      :id=1 :reqList="eleReqList[1]" @finishReq="updateWaitList">
+            <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[1]" :capacity="eleCapacity"
+                      :id=1 :reqList="eleReqList[1]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
+                      :stop="handleStop" :ignore="ignoreList[1]">
             </Elevator>
         </a-col>
     </a-row>
@@ -40,16 +27,25 @@
     <a-row class="gap"></a-row>
     <a-row>
       <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
-        <Elevator></Elevator>
+          <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[2]" :capacity="eleCapacity"
+                    :id=2 :reqList="eleReqList[2]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
+                    :stop="handleStop" :ignore="ignoreList[2]">
+          </Elevator>
       </a-col>
       <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
-        <Elevator></Elevator>
+          <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[3]" :capacity="eleCapacity"
+                    :id=3 :reqList="eleReqList[3]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
+                    :stop="handleStop" :ignore="ignoreList[3]">
+          </Elevator>
       </a-col>
     </a-row>
     <a-row class="gap"></a-row>
     <a-row>
       <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
-        <Elevator></Elevator>
+          <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[4]" :capacity="eleCapacity"
+                    :id=4 :reqList="eleReqList[4]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
+                    :stop="handleStop" :ignore="ignoreList[4]">
+          </Elevator>
       </a-col>
     </a-row>
 
@@ -71,46 +67,59 @@
         },
         data(){
             return {
-                reqList:[...new Array(20)].map(()=>[...new Array(20)].map(()=>0)),
-                f: '',
-                t: '',
-                // eleList:[...new Array(5)].map(()=>0),
-                // eleDirList:[...new Array(5)].map(()=>0),
-                waitList:[...new Array(20)].map(()=>0), //减1
+                upList:[...new Array(20)].map(()=>false), //减1
+                downList:[...new Array(20)].map(()=>false), //减1
+                eleStateList:[...new Array(5)].map(()=>0), // 0表示空闲
                 eleLoadList:[...new Array(5)].map(()=>0),
                 eleReqList:[...new Array(5)].map(()=>[...new Array(20)].map(()=>0)),
                 eleCapacity:10,
-            }
-        },
-        computed:{
-            number:function () {
-                return this.waitList.reduce((i,j)=>i+j);
-            },
-            from:function () {
-                return this.f-1;
-            },
-            to:function () {
-                return this.t-1
+                cancel:-1,
+                ignoreList:[false,true,true,true,true],
             }
         },
         methods:{
-            addReq(){
-                this.reqList[this.from][this.to]++;
-                this.$set(this.waitList,this.from,this.waitList[this.from]+1);
-            },
-            updateWaitList(floor,id){
-                if(this.eleCapacity-this.eleLoadList[id]>=this.waitList[floor]){
-                    this.eleLoadList[id]+=this.waitList[floor];
-                    this.$set(this.waitList,floor,0);
-                    for(let i=0;i<this.eleReqList[id].length;++i){
-                        this.$set(this.eleReqList[id],i,this.reqList[this.from][i]);
-                    }
-                }else{
-                    this.$set(this.waitList,floor,this.waitList[floor]-(this.eleCapacity-this.eleLoadList[id]));
-                    this.eleLoadList[id]=this.eleCapacity;
+            handleSelect(dir,index){
+                if(dir===1){
+                    this.$set(this.upList,index,true);
                 }
-            }
-        }
+                else if(dir===-1){
+                    this.$set(this.downList,index,true);
+                }
+            },
+            handleStop(floor,id){
+                console.log(id);
+                this.cancel=floor;
+            },
+            updateEle(floor,id){
+                console.log(id);
+                if(this.upList[floor]){
+                    this.$set(this.upList,floor,false);
+                }
+                if(this.downList[floor]){
+                    this.$set(this.downList,floor,false);
+                }
+            },
+            updateState(state,id){
+                this.$set(this.eleStateList,id,state);
+            },
+        },
+        watch:{
+          eleStateList:function (newValue) {
+              let first = true;
+              for(let i=0;i<newValue.length;++i){
+                  if(newValue[i]===0){
+                      if(first){
+                          first=false;
+                          this.$set(this.ignoreList,i,false);
+                      }else{
+                          this.$set(this.ignoreList,i,true);
+                      }
+                  }else{
+                      this.$set(this.ignoreList,i,false);
+                  }
+              }
+          }
+        },
     }
 </script>
 
