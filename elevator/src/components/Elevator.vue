@@ -3,7 +3,7 @@
         <div :class="{map1:direction===0&&doorState===0, map2:!(direction===0&&doorState===0)}">
             <div class="BtnGroup" >
                 <a-button :class="{aButton:!isSelect[index],selectBtn:isSelect[index]}"
-                          shape="circle" ghost=true v-for="(item,index) in btnList" :key="index" @click="handleClick(item-1)">
+                          shape="circle" ghost="true" v-for="(item,index) in btnList" :key="index" @click="handleClick(item-1)">
                     {{ item }}
                 </a-button>
             </div>
@@ -42,8 +42,8 @@
         },
         props:{
             id: Number,                                     // 电梯id编号
-            upWaitList:[],                                  // 外部向上请求队列
-            downWaitList:[],                                // 外部向下请求队列
+            upWaitList:Array,                                  // 外部向上请求队列
+            downWaitList:Array,                                // 外部向下请求队列
             load: Number,                                   // 电梯当前载重
             capacity: Number,                               // 电梯最大容积
             cancel:Number,
@@ -106,10 +106,14 @@
             },
             run(){                                          // 运行逻辑
                 if(this.direction!==0){                     // 如果在运行中
-                    console.log("run");
+                    console.log(this.id+this.destination+this.ctFloor);
                     if(this.direction===1){                 // 移动位置
                         this.ctFloor++;
                         if(this.upList[this.ctFloor]||this.isSelect[this.ctFloor]){
+                            this.$emit("changeFloor",this.ctFloor,this.id);
+                            this.openDoor(true);
+                        }
+                        else if(this.direction===0&&this.downList[this.ctFloor]){
                             this.$emit("changeFloor",this.ctFloor,this.id);
                             this.openDoor(true);
                         }
@@ -120,6 +124,10 @@
                     else if(this.direction===-1){
                         this.ctFloor--;
                         if(this.downList[this.ctFloor]||this.isSelect[this.ctFloor]){
+                            this.$emit("changeFloor",this.ctFloor,this.id);
+                            this.openDoor(true);
+                        }
+                        else if(this.direction===0&&this.upList[this.ctFloor]){
                             this.$emit("changeFloor",this.ctFloor,this.id);
                             this.openDoor(true);
                         }
