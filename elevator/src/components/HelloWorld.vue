@@ -13,13 +13,13 @@
         <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
             <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[0]" :capacity="eleCapacity"
                       :id=0 :reqList="eleReqList[0]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
-                      :stop="handleStop" :ignore="ignoreList[0]">
+                      :stop="handleStop" :ignore="ignoreList[0]" @changeDir="updateDir">
             </Elevator>
         </a-col>
         <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
             <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[1]" :capacity="eleCapacity"
                       :id=1 :reqList="eleReqList[1]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
-                      :stop="handleStop" :ignore="ignoreList[1]">
+                      :stop="handleStop" :ignore="ignoreList[1]" @changeDir="updateDir">
             </Elevator>
         </a-col>
     </a-row>
@@ -29,13 +29,13 @@
       <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
           <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[2]" :capacity="eleCapacity"
                     :id=2 :reqList="eleReqList[2]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
-                    :stop="handleStop" :ignore="ignoreList[2]">
+                    :stop="handleStop" :ignore="ignoreList[2]" @changeDir="updateDir">
           </Elevator>
       </a-col>
       <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
           <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[3]" :capacity="eleCapacity"
                     :id=3 :reqList="eleReqList[3]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
-                    :stop="handleStop" :ignore="ignoreList[3]">
+                    :stop="handleStop" :ignore="ignoreList[3]" @changeDir="updateDir">
           </Elevator>
       </a-col>
     </a-row>
@@ -44,7 +44,7 @@
       <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 8, offset: 2 }">
           <Elevator :upWaitList="upList" :downWaitList="downList" :load="eleLoadList[4]" :capacity="eleCapacity"
                     :id=4 :reqList="eleReqList[4]" @changeFloor="updateEle" @changeState="updateState" :cancel="cancel"
-                    :stop="handleStop" :ignore="ignoreList[4]">
+                    :stop="handleStop" :ignore="ignoreList[4]" @changeDir="updateDir">
           </Elevator>
       </a-col>
     </a-row>
@@ -67,18 +67,24 @@
         },
         data(){
             return {
-                upList:[...new Array(20)].map(()=>false), //减1
-                downList:[...new Array(20)].map(()=>false), //减1
-                eleStateList:[...new Array(5)].map(()=>0), // 0表示空闲
+                upList:[...new Array(20)].map(()=>false),       // 减1
+                downList:[...new Array(20)].map(()=>false),     // 减1
+                eleStateList:[...new Array(5)].map(()=>0),      // 0表示空闲
+                eleDirList:[...new Array(5)].map(()=>0),        // 电梯方向
+                eleOldDirList:[...new Array(5)].map(()=>0),     // 电梯上次方向
+                elePosList:[...new Array(5)].map(()=>0),
+                cancel:-1,
+                ignoreList:[false,true,true,true,true],
+
                 eleLoadList:[...new Array(5)].map(()=>0),
                 eleReqList:[...new Array(5)].map(()=>[...new Array(20)].map(()=>0)),
                 eleCapacity:10,
-                cancel:-1,
-                ignoreList:[false,true,true,true,true],
             }
         },
         methods:{
             handleSelect(dir,index){
+                console.log("当前电梯方向数组："+this.eleDirList);
+                this.checkPassing(dir,index);
                 if(dir===1){
                     this.$set(this.upList,index,true);
                 }
@@ -90,8 +96,12 @@
                 console.log(id);
                 this.cancel=floor;
             },
+            updateDir(dir, id){
+                this.$set(this.eleOldDirList, id, this.eleDirList[id]);
+                this.$set(this.eleDirList, id, dir);
+            },
             updateEle(floor,id){
-                console.log(id);
+                this.$set(this.elePosList,id,floor);
                 if(this.upList[floor]){
                     this.$set(this.upList,floor,false);
                 }
@@ -102,23 +112,33 @@
             updateState(state,id){
                 this.$set(this.eleStateList,id,state);
             },
-        },
-        watch:{
-          eleStateList:function (newValue) {
-              let first = true;
-              for(let i=0;i<newValue.length;++i){
-                  if(newValue[i]===0){
-                      if(first){
-                          first=false;
-                          this.$set(this.ignoreList,i,false);
-                      }else{
-                          this.$set(this.ignoreList,i,true);
-                      }
-                  }else{
-                      this.$set(this.ignoreList,i,false);
-                  }
-              }
-          }
+            checkPassing(dir,floor){
+                for(let i=0;i<this.elePosList.length;++i){
+                    if(this.eleDirList[i]===0&&this.eleStateList[i]===0){
+                        this.ignoreList[i]=true;
+                    }
+                }
+                let found = -1;
+                console.log(this.eleDirList+" * "+this.eleOldDirList+" XXX "+this.eleStateList);
+                for(let i =0;i<this.eleDirList.length;++i){
+                    if((this.eleDirList[i]===dir)||(this.eleOldDirList[i]===dir&&this.eleStateList[i]===1)){
+                        if(dir===1&&this.elePosList[i]<floor){
+                            found=i;
+                        }
+                        else if(dir===-1&&this.elePosList[i]>floor){
+                            found=i;
+                        }
+                    }
+                }
+                if(found===-1){                             //如果没有顺路的电梯
+                    for(let i=0;i<this.elePosList.length;++i){
+                        if(this.eleDirList[i]===0&&this.eleStateList[i]===0){
+                            this.ignoreList[i]=false;
+                            break;
+                        }
+                    }
+                }
+            }
         },
     }
 </script>

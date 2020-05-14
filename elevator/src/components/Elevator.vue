@@ -198,6 +198,7 @@
         },
         watch:{
             direction(newValue,oldValue){
+                this.$emit("changeDir",newValue,this.id);
                 this.oldDir=oldValue;
                 if(newValue !== 0){
                     this.$emit("changeState",1,this.id);
@@ -210,9 +211,12 @@
                 }
             },
             upWaitList(newValue){
-                // alert(this.id.toString()+this.ignore);
                 for(let i=0;i<newValue.length;++i){
-                    this.upList[i]=this.upWaitList[i]
+                    if(newValue[i]!==this.upList[i]){
+                        if(!(newValue[i]===true&&this.ignore===true)){
+                            this.upList[i]=this.upWaitList[i]
+                        }
+                    }
                 }
                 if(!this.isSelect[this.destination]&&!this.downList[this.destination]&&!this.upList[this.destination]){
                     this.destination=this.ctFloor
@@ -220,7 +224,7 @@
                 //是否需要强制启动
                 if(this.doorState===0&&this.direction===0){
                     for(let i=0;i<newValue.length;++i){
-                        if(newValue[i]){
+                        if(this.upList[i]){
                             this.destination=i;
                             break;
                         }
@@ -229,7 +233,11 @@
             },
             downWaitList(newValue){
                 for(let i=0;i<newValue.length;++i){
-                    this.downList[i]=this.downWaitList[i]
+                    if(newValue[i]!==this.downList[i]){
+                        if(newValue[i]===false||this.ignore===false){
+                            this.$set(this.downList,i,newValue[i]);
+                        }
+                    }
                 }
                 if(!this.isSelect[this.destination]&&!this.downList[this.destination]&&!this.upList[this.destination]){
                     this.destination=this.ctFloor
@@ -237,7 +245,7 @@
                 //是否需要强制启动
                 if(this.doorState===0&&this.direction===0){
                     for(let i=0;i<newValue.length;++i){
-                        if(newValue[i]){
+                        if(this.downList[i]){
                             this.destination=i;
                             break;
                         }
