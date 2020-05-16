@@ -3,9 +3,11 @@
         <div :class="{map1:direction===0&&doorState===0, map2:!(direction===0&&doorState===0)}">
             <div class="BtnGroup" >
                 <a-button :class="{aButton:!isSelect[index],selectBtn:isSelect[index]}"
-                          shape="circle" ghost="true" v-for="(item,index) in btnList" :key="index" @click="handleClick(item-1)">
+                          shape="circle" :ghost="true" v-for="(item,index) in btnList" :key="index" @click="handleClick(item-1)">
                     {{ item }}
                 </a-button>
+                <a-button shape="circle" :ghost="true" icon="phone" ></a-button>
+                <a-button shape="circle" :ghost="true" icon="alert" @click="handleAlert"></a-button>
             </div>
             <div class="success-box">
                 <div :class="{face:content.isStop, face2:!content.isStop}">
@@ -103,6 +105,9 @@
                         this.destination=index;
                     }
                 }
+            },
+            handleAlert(){
+              alert("发出警报！");
             },
             run(){                                          // 运行逻辑
                 if(this.direction!==0){                     // 如果在运行中

@@ -4,10 +4,10 @@
             <div v-for="(item,index) in labelList" :key="index" class="ctn">
                 <h1 class="alert">{{ item }}</h1>
                 <a-button :class="{aBtn:!upList[index],aBtn2:upList[index]}" icon="arrow-up"
-                          @click="handleClick(1,index)" shape="circle" ghost="true">
+                          @click="handleClick(1,index)" shape="circle" :ghost="true">
                 </a-button>
                 <a-button :class="{aBtn:!downList[index],aBtn2:downList[index]}" icon="arrow-down"
-                          @click="handleClick(-1,index)" shape="circle" ghost="true">
+                          @click="handleClick(-1,index)" shape="circle" :ghost="true">
                 </a-button>
             </div>
         </div>
@@ -20,11 +20,12 @@
         data(){
             return{
                 labelList:[...Array(20)].map((i,j)=>j+1<10?"0"+(1+j).toString():(1+j).toString()),
+                ghost:true,
             }
         },
         props:{
-            upList:[],
-            downList:[],
+            upList:Array,
+            downList:Array,
         },
         methods:{
             handleClick(dir,index){

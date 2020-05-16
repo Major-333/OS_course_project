@@ -1,8 +1,7 @@
 <template>
   <div class="hello">
-<!--    <BtnGroup></BtnGroup>-->
     <a-row>
-        <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 10, offset: 6 }">
+        <a-col :xs="{ span: 5, offset: 1 }" :lg="{ span: 11, offset: 6 }">
             <BtnGroup :upList="upList" :downList="downList" @select="handleSelect">
             </BtnGroup>
         </a-col>
@@ -48,7 +47,6 @@
           </Elevator>
       </a-col>
     </a-row>
-
   </div>
 </template>
 
