@@ -111,7 +111,7 @@
             },
             run(){                                          // 运行逻辑
                 if(this.direction!==0){                     // 如果在运行中
-                    console.log(this.id+this.destination+this.ctFloor);
+                    console.log("id: "+this.id+" dst: "+this.destination+" ct: "+this.ctFloor);
                     if(this.direction===1){                 // 移动位置
                         this.ctFloor++;
                         if(this.upList[this.ctFloor]||this.isSelect[this.ctFloor]){

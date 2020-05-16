@@ -115,6 +115,9 @@
                     if(this.eleDirList[i]===0&&this.eleStateList[i]===0){
                         this.ignoreList[i]=true;
                     }
+                    else{
+                        this.ignoreList[i]=false;
+                    }
                 }
                 let found = -1;
                 console.log(this.eleDirList+" * "+this.eleOldDirList+" XXX "+this.eleStateList);
@@ -136,6 +139,7 @@
                         }
                     }
                 }
+                console.log("now the ignore list is: "+this.ignoreList);
             }
         },
     }

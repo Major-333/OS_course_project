@@ -5,9 +5,9 @@ import 'ant-design-vue/dist/antd.css';
 import { Button } from 'ant-design-vue';
 
 Vue.use(Button);
-Vue.config.productionTip = false
+Vue.config.productionTip = false;
 Vue.use(Antd);
 
 new Vue({
   render: h => h(App),
-}).$mount('#app')
+}).$mount('#app');
