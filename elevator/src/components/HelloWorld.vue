@@ -142,6 +142,9 @@
                 console.log("now the ignore list is: "+this.ignoreList);
             }
         },
+        created() {
+            alert("页面中最后一次被点击的按钮会有蓝色的光晕效果，如果觉得这个特效影响了对电梯的判断，请点击完想点击的按钮后，点击一下空白处")
+        }
     }
 </script>
 

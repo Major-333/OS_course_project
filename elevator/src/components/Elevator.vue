@@ -38,7 +38,7 @@
                 isSelect: [...Array(20)].map(()=>false),    // 内部请求队列
                 upList: [...Array(20)].map(()=>false),      // 外部向上请求队列
                 downList: [...Array(20)].map(()=>false),    // 外部向下请求队列
-                oldDir: 0,                                  // 上一次的方向
+                oldDir: 1,                                  // 上一次的方向
                 waitToRun:false,                            // 关门后是否启动run(补丁关门时启动run问题)
             }
         },
@@ -115,11 +115,10 @@
                     if(this.direction===1){                 // 移动位置
                         this.ctFloor++;
                         if(this.upList[this.ctFloor]||this.isSelect[this.ctFloor]){
-                            this.$emit("changeFloor",this.ctFloor,this.id);
                             this.openDoor(true);
                         }
                         else if(this.direction===0&&this.downList[this.ctFloor]){
-                            this.$emit("changeFloor",this.ctFloor,this.id);
+
                             this.openDoor(true);
                         }
                         else{
@@ -129,11 +128,9 @@
                     else if(this.direction===-1){
                         this.ctFloor--;
                         if(this.downList[this.ctFloor]||this.isSelect[this.ctFloor]){
-                            this.$emit("changeFloor",this.ctFloor,this.id);
                             this.openDoor(true);
                         }
                         else if(this.direction===0&&this.upList[this.ctFloor]){
-                            this.$emit("changeFloor",this.ctFloor,this.id);
                             this.openDoor(true);
                         }
                         else{
@@ -187,6 +184,7 @@
                 return -1;
             },
             openDoor(isContinue){
+                this.$emit("changeFloor",this.ctFloor,this.id);
                 this.$emit("stop",this.ctFloor,this.id);
                 this.doorState=1;
                 this.isSelect[this.ctFloor]=false;
@@ -204,7 +202,9 @@
         watch:{
             direction(newValue,oldValue){
                 this.$emit("changeDir",newValue,this.id);
-                this.oldDir=oldValue;
+                if(oldValue!==0){
+                    this.oldDir=oldValue;
+                }
                 if(newValue !== 0){
                     this.$emit("changeState",1,this.id);
                     if(this.doorState===0){
@@ -230,7 +230,16 @@
                 if(this.doorState===0&&this.direction===0){
                     for(let i=0;i<newValue.length;++i){
                         if(this.upList[i]){
-                            this.destination=i;
+                            if(i===this.ctFloor){
+                                if(this.doorState===0){
+                                    this.openDoor(true);
+                                }else{
+                                    this.$emit("changeFloor",this.ctFloor,this.id);
+                                }
+                            }
+                            else{
+                                this.destination=i;
+                            }
                             break;
                         }
                     }
@@ -251,12 +260,20 @@
                 if(this.doorState===0&&this.direction===0){
                     for(let i=0;i<newValue.length;++i){
                         if(this.downList[i]){
-                            this.destination=i;
+                            if(i===this.ctFloor){
+                                if(this.doorState===0){
+                                    this.openDoor(true);
+                                }else{
+                                    this.$emit("changeFloor",this.ctFloor,this.id);
+                                }
+                            }
+                            else{
+                                this.destination=i;
+                            }
                             break;
                         }
                     }
                 }
-
             },
             cancel(newValue){
                 if(newValue>=0&&newValue<20){
